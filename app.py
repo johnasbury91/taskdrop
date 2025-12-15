@@ -134,9 +134,6 @@ async def home():
         html += '<div class="empty">😴 No tasks right now.<br>Check back soon!</div>'
 
     html += """
-            <div class="footer">
-                <a href="/admin">Admin</a>
-            </div>
         </div>
     </body>
     </html>
@@ -497,8 +494,16 @@ https://reddit.com/r/example/post2 | Another comment" required></textarea>
         html += f"""
         <div class="card">
             <h2>📁 {project} <small style="color:#666">({completed}/{total} done)</small></h2>
+            <details style="margin-bottom: 16px;">
+                <summary style="cursor: pointer; color: #2563eb; font-size: 14px;">📝 Bulk Edit</summary>
+                <form action="/admin/bulk/{project}" method="POST" style="margin-top: 12px;">
+                    <textarea name="tasks" style="min-height: 150px; font-size: 13px;">{chr(10).join([f"{t['url']} | {t['comment']}" for t in tasks])}</textarea>
+                    <button type="submit" style="margin-top: 8px;">Save All</button>
+                    <small style="color: #666; display: block; margin-top: 8px;">Format: URL | Comment (one per line). This replaces all tasks in this project.</small>
+                </form>
+            </details>
             <table>
-                <tr><th>ID</th><th>URL</th><th>Status</th><th>Proof</th><th>Actions</th></tr>
+                <tr><th>URL</th><th>Comment</th><th>Status</th><th>Actions</th></tr>
         """
         
         # Get assigned task IDs for this project
@@ -517,19 +522,19 @@ https://reddit.com/r/example/post2 | Another comment" required></textarea>
             else:
                 status = "open"
                 status_label = "🟢 Open"
-            proof = f'<a href="{task.get("proof_url", "#")}" target="_blank">View</a>' if task.get("proof_url") else "-"
-            short_url = task["url"][:40] + "..." if len(task["url"]) > 40 else task["url"]
-            
+            short_url = task["url"][:35] + "..." if len(task["url"]) > 35 else task["url"]
+            short_comment = task["comment"][:50] + "..." if len(task["comment"]) > 50 else task["comment"]
+            proof_link = f' <a href="{task.get("proof_url")}" target="_blank" style="font-size:11px">[proof]</a>' if task.get("proof_url") else ""
+
             html += f"""
                 <tr>
-                    <td><code>{task['id'][:8]}</code></td>
-                    <td><a href="{task['url']}" target="_blank">{short_url}</a></td>
-                    <td><span class="status {status}">{status_label}</span></td>
-                    <td>{proof}</td>
+                    <td style="max-width:200px"><a href="{task['url']}" target="_blank" style="font-size:13px">{short_url}</a></td>
+                    <td style="max-width:250px; font-size:13px; color:#555">{short_comment}</td>
+                    <td><span class="status {status}">{status_label}</span>{proof_link}</td>
                     <td class="actions">
                         <a href="/admin/edit/{project}/{task['id']}"><button class="btn-sm btn-edit">Edit</button></a>
                         <form action="/admin/delete/{project}/{task['id']}" method="POST" style="display:inline" onsubmit="return confirm('Delete this task?')">
-                            <button type="submit" class="btn-sm btn-delete">Delete</button>
+                            <button type="submit" class="btn-sm btn-delete">Del</button>
                         </form>
                     </td>
                 </tr>
@@ -675,6 +680,39 @@ async def admin_delete_task(project: str, task_id: str, admin: str = Depends(ver
         for key in keys_to_remove:
             del data["assignments"][key]
 
+    save_data(data)
+    return RedirectResponse("/admin", status_code=303)
+
+@app.post("/admin/bulk/{project}")
+async def admin_bulk_edit(project: str, tasks: str = Form(...), admin: str = Depends(verify_admin)):
+    """Bulk replace all tasks in a project"""
+    data = load_data()
+
+    # Clear existing tasks and assignments for this project
+    if project in data["projects"]:
+        old_task_ids = {t["id"] for t in data["projects"][project]}
+        keys_to_remove = [k for k, v in data["assignments"].items() if v["task_id"] in old_task_ids]
+        for key in keys_to_remove:
+            del data["assignments"][key]
+
+    # Parse and add new tasks
+    new_tasks = []
+    for line in tasks.strip().split("\n"):
+        if "|" not in line:
+            continue
+        parts = line.split("|", 1)
+        url = parts[0].strip()
+        comment = parts[1].strip()
+        if url and comment:
+            new_tasks.append({
+                "id": secrets.token_hex(6),
+                "url": url,
+                "comment": comment,
+                "created_at": datetime.now().isoformat(),
+                "completed": False
+            })
+
+    data["projects"][project] = new_tasks
     save_data(data)
     return RedirectResponse("/admin", status_code=303)
 
