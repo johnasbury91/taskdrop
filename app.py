@@ -3,9 +3,9 @@ Simple Task Server - Serve unique tasks to microtask workers
 Supports multiple projects (dharmis, vpns, etc.)
 """
 
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from datetime import datetime, timedelta
 import json
 import os
@@ -13,9 +13,22 @@ import secrets
 import hashlib
 
 app = FastAPI(title="Task Server")
+security = HTTPBasic()
 
 DATA_FILE = "data.json"
 TASK_EXPIRY_MINUTES = 30
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme")
+
+def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
+    """Verify admin credentials"""
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    if credentials.username != "admin" or not correct_password:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 # --- Data Layer ---
 
@@ -320,7 +333,7 @@ async def submit_proof(task_id: str, request: Request, project: str = Form(...),
 # --- Admin Routes ---
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_dashboard():
+async def admin_dashboard(admin: str = Depends(verify_admin)):
     """Simple admin dashboard"""
     data = load_data()
     
@@ -434,7 +447,7 @@ https://reddit.com/r/example/post2 | Another comment" required></textarea>
     return html
 
 @app.post("/admin/add")
-async def admin_add_tasks(project: str = Form(...), tasks: str = Form(...)):
+async def admin_add_tasks(project: str = Form(...), tasks: str = Form(...), admin: str = Depends(verify_admin)):
     """Add tasks from form"""
     data = load_data()
     
@@ -461,7 +474,7 @@ async def admin_add_tasks(project: str = Form(...), tasks: str = Form(...)):
     return RedirectResponse("/admin", status_code=303)
 
 @app.get("/admin/export")
-async def admin_export():
+async def admin_export(admin: str = Depends(verify_admin)):
     """Export all data"""
     data = load_data()
     return JSONResponse(data)
