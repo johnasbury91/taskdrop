@@ -33,15 +33,19 @@ def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
 # --- Data Layer ---
 
 def load_data():
-    # Ensure directory exists
-    data_dir = os.path.dirname(DATA_FILE)
-    if data_dir:
-        os.makedirs(data_dir, exist_ok=True)
+    try:
+        # Ensure directory exists
+        data_dir = os.path.dirname(DATA_FILE)
+        if data_dir:
+            os.makedirs(data_dir, exist_ok=True)
 
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return {"projects": {}, "assignments": {}, "submissions": []}
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r") as f:
+                return json.load(f)
+        return {"projects": {}, "assignments": {}, "submissions": []}
+    except Exception as e:
+        print(f"ERROR loading data: {e}")
+        return {"projects": {}, "assignments": {}, "submissions": []}
 
 def save_data(data):
     # Ensure directory exists
@@ -544,6 +548,18 @@ async def admin_export(admin: str = Depends(verify_admin)):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+@app.get("/debug")
+async def debug():
+    """Debug endpoint to check data file status"""
+    data_dir = os.path.dirname(DATA_FILE) if os.path.dirname(DATA_FILE) else "."
+    return {
+        "DATA_FILE": DATA_FILE,
+        "data_dir": data_dir,
+        "dir_exists": os.path.isdir(data_dir),
+        "file_exists": os.path.exists(DATA_FILE),
+        "dir_contents": os.listdir(data_dir) if os.path.isdir(data_dir) else "N/A"
+    }
 
 if __name__ == "__main__":
     import uvicorn
