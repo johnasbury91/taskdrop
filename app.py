@@ -15,7 +15,7 @@ import hashlib
 app = FastAPI(title="Task Server")
 security = HTTPBasic()
 
-DATA_FILE = "data.json"
+DATA_FILE = os.environ.get("DATA_FILE", "data.json")
 TASK_EXPIRY_MINUTES = 30
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme")
 
