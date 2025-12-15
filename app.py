@@ -83,39 +83,60 @@ async def home():
     """Landing page - list available projects"""
     data = load_data()
     projects = list(data["projects"].keys())
-    
+
+    # Count only available tasks (not completed, not assigned)
+    def get_available_count(project):
+        assigned_ids = {a["task_id"] for key, a in data["assignments"].items()
+                       if key.startswith(f"{project}:") and not a.get("completed")}
+        return len([t for t in data["projects"].get(project, [])
+                   if not t.get("completed") and t["id"] not in assigned_ids])
+
     html = """
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Task Server</title>
+        <title>Get Paid for Simple Tasks</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             * { box-sizing: border-box; }
-            body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
-            .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            h1 { margin-top: 0; }
-            a { color: #2563eb; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-            .project-link { display: block; padding: 12px; background: #f0f7ff; border-radius: 8px; margin-bottom: 8px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+            .container { background: white; border-radius: 20px; padding: 32px 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+            h1 { margin: 0 0 8px 0; font-size: 28px; color: #1a1a2e; }
+            .subtitle { color: #666; margin-bottom: 24px; font-size: 16px; }
+            .project { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8fafc; border-radius: 12px; margin-bottom: 12px; text-decoration: none; color: inherit; transition: all 0.2s; border: 2px solid transparent; }
+            .project:hover { background: #f0f7ff; border-color: #667eea; transform: translateY(-2px); }
+            .project-name { font-weight: 600; font-size: 17px; color: #1a1a2e; }
+            .project-count { background: #667eea; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+            .empty { text-align: center; padding: 40px 20px; color: #666; }
+            .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; text-align: center; }
+            .footer a { color: #999; font-size: 13px; text-decoration: none; }
         </style>
     </head>
     <body>
-        <div class="card">
-            <h1>🎯 Task Server</h1>
-            <p>Select a project to get your task:</p>
+        <div class="container">
+            <h1>👋 Ready to earn?</h1>
+            <p class="subtitle">Pick a project and start your task</p>
     """
-    
+
     if projects:
         for project in projects:
-            task_count = len([t for t in data["projects"].get(project, []) if not t.get("completed")])
-            html += f'<a class="project-link" href="/task?project={project}"><strong>{project}</strong> - {task_count} tasks available</a>'
+            count = get_available_count(project)
+            if count > 0:
+                html += f'''
+                <a class="project" href="/task?project={project}">
+                    <span class="project-name">📋 {project}</span>
+                    <span class="project-count">{count} available</span>
+                </a>'''
+        # Check if any projects have tasks
+        if not any(get_available_count(p) > 0 for p in projects):
+            html += '<div class="empty">😴 No tasks right now.<br>Check back soon!</div>'
     else:
-        html += "<p><em>No projects available yet.</em></p>"
-    
+        html += '<div class="empty">😴 No tasks right now.<br>Check back soon!</div>'
+
     html += """
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
-            <p><small><a href="/admin">Admin →</a></small></p>
+            <div class="footer">
+                <a href="/admin">Admin</a>
+            </div>
         </div>
     </body>
     </html>
@@ -166,20 +187,28 @@ async def get_task(request: Request, project: str = None):
     
     if not available:
         return HTMLResponse("""
+            <!DOCTYPE html>
             <html>
             <head>
-                <title>No Tasks</title>
+                <title>All Done!</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <style>
-                    body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; }
-                    .card { background: white; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                    * { box-sizing: border-box; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; }
+                    .container { background: white; border-radius: 20px; padding: 40px 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); text-align: center; width: 100%; }
+                    .emoji { font-size: 64px; margin-bottom: 16px; }
+                    h1 { margin: 0 0 12px 0; font-size: 24px; color: #1a1a2e; }
+                    p { color: #666; margin-bottom: 24px; line-height: 1.6; }
+                    .btn { display: inline-block; background: #667eea; color: white; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; transition: all 0.2s; }
+                    .btn:hover { background: #5a6fd6; transform: translateY(-2px); }
                 </style>
             </head>
             <body>
-                <div class="card">
-                    <h1>😅 No Tasks Available</h1>
-                    <p>All tasks have been claimed. Check back later!</p>
-                    <p><a href="/">← Back</a></p>
+                <div class="container">
+                    <div class="emoji">🎉</div>
+                    <h1>All tasks claimed!</h1>
+                    <p>Other workers are on it. New tasks are added regularly, so check back soon.</p>
+                    <a href="/" class="btn">← Back to projects</a>
                 </div>
             </body>
             </html>
@@ -205,128 +234,119 @@ def render_task_page(task, code, expires_in, project):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Your Task - {code}</title>
+        <title>Your Task</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             * {{ box-sizing: border-box; }}
-            body {{ font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 16px; background: #f8fafc; color: #334155; }}
-            .header {{ background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }}
-            .step {{ background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }}
-            .step-header {{ display: flex; align-items: center; margin-bottom: 12px; }}
-            .step-number {{ background: #e0e7ff; color: #4338ca; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; margin-right: 12px; flex-shrink: 0; }}
-            .step-title {{ font-size: 16px; font-weight: 600; color: #1e293b; }}
-            h1 {{ margin: 0 0 8px 0; font-size: 1.5em; color: #1e293b; font-weight: 600; }}
-            .code {{ background: #fef3c7; padding: 12px 20px; border-radius: 10px; font-family: monospace; font-size: 1.5em; display: inline-block; font-weight: bold; color: #92400e; letter-spacing: 2px; }}
-            .timer {{ color: #64748b; font-size: 0.95em; }}
-            .timer span {{ color: #dc2626; font-weight: 600; }}
-            .link {{ color: #4f46e5; word-break: break-all; font-size: 14px; }}
-            .link:hover {{ text-decoration: underline; }}
-            .btn {{ display: block; width: 100%; padding: 14px 20px; border-radius: 10px; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer; border: none; margin-top: 12px; text-decoration: none; transition: all 0.2s; }}
-            .btn-primary {{ background: #4f46e5; color: white; }}
-            .btn-primary:hover {{ background: #4338ca; }}
-            .btn-secondary {{ background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }}
-            .btn-secondary:hover {{ background: #e2e8f0; }}
-            .btn-success {{ background: #10b981; color: white; }}
-            .btn-success:hover {{ background: #059669; }}
-            .comment-box {{ background: #f8fafc; padding: 16px; border-radius: 10px; font-size: 14px; white-space: pre-wrap; margin: 12px 0; border: 1px solid #e2e8f0; line-height: 1.6; }}
-            input[type="text"] {{ width: 100%; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 16px; margin-top: 8px; background: #f8fafc; }}
-            input[type="text"]:focus {{ border-color: #4f46e5; outline: none; background: white; }}
-            .note {{ background: #fef3c7; color: #92400e; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-top: 16px; }}
-            .help {{ color: #64748b; font-size: 13px; margin-top: 8px; }}
-            ol {{ margin: 8px 0; padding-left: 24px; }}
-            ol li {{ margin-bottom: 8px; font-size: 15px; line-height: 1.5; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 500px; margin: 0 auto; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }}
+            .card {{ background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }}
+            .header {{ text-align: center; padding: 24px 20px; }}
+            .code {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 24px; border-radius: 12px; font-family: monospace; font-size: 1.6em; display: inline-block; font-weight: bold; letter-spacing: 3px; }}
+            .timer {{ color: #666; font-size: 14px; margin-top: 12px; }}
+            .timer span {{ color: #e53e3e; font-weight: 600; }}
+            .step-num {{ background: #667eea; color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; margin-right: 10px; flex-shrink: 0; }}
+            .step-title {{ font-size: 15px; font-weight: 600; color: #1a1a2e; display: inline; }}
+            .step-header {{ margin-bottom: 12px; }}
+            .link {{ color: #667eea; word-break: break-all; font-size: 14px; }}
+            .comment-box {{ background: #f7f8fc; padding: 14px; border-radius: 10px; font-size: 14px; white-space: pre-wrap; margin: 10px 0; border: 1px dashed #d0d5e3; line-height: 1.5; }}
+            .btn {{ display: block; width: 100%; padding: 14px 20px; border-radius: 10px; font-size: 15px; font-weight: 600; text-align: center; cursor: pointer; border: none; margin-top: 10px; text-decoration: none; transition: all 0.2s; }}
+            .btn-copy {{ background: #f0f2f8; color: #4a5568; }}
+            .btn-copy:hover {{ background: #e2e6f0; }}
+            .btn-submit {{ background: #48bb78; color: white; }}
+            .btn-submit:hover {{ background: #38a169; }}
+            input[type="text"] {{ width: 100%; padding: 14px 16px; border: 2px solid #e2e6f0; border-radius: 10px; font-size: 16px; margin-top: 8px; }}
+            input[type="text"]:focus {{ border-color: #667eea; outline: none; }}
+            .help {{ color: #888; font-size: 13px; margin-top: 6px; }}
+            ol {{ margin: 8px 0; padding-left: 20px; color: #4a5568; }}
+            ol li {{ margin-bottom: 6px; font-size: 14px; line-height: 1.5; }}
+            .note {{ background: #fffbeb; color: #92400e; padding: 12px; border-radius: 10px; font-size: 13px; margin-top: 14px; text-align: center; }}
+            .save-note {{ background: #f0fff4; color: #276749; padding: 10px; border-radius: 8px; font-size: 13px; margin-top: 10px; }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <h1>Your Task</h1>
+        <div class="card header">
             <div class="code">{code}</div>
-            <p class="help" style="margin-top: 12px;">Save this code for payment proof</p>
-            <p class="timer">Time remaining: <span id="timer">{expires_in // 60}:{expires_in % 60:02d}</span></p>
+            <div class="save-note">📌 Save this code - you need it for payment</div>
+            <p class="timer">⏱️ Time left: <span id="timer">{expires_in // 60}:{expires_in % 60:02d}</span></p>
         </div>
 
-        <div class="step">
+        <div class="card">
             <div class="step-header">
-                <span class="step-number">1</span>
-                <span class="step-title">Open the page</span>
+                <span class="step-num">1</span>
+                <span class="step-title">Open this link</span>
             </div>
-            <p><a href="{task['url']}" target="_blank" class="link">{task['url']}</a></p>
-            <p class="help">Opens in a new tab. Keep this page open.</p>
+            <a href="{task['url']}" target="_blank" class="link">🔗 {task['url'][:50]}{'...' if len(task['url']) > 50 else ''}</a>
+            <p class="help">Opens in new tab. Keep this page open!</p>
         </div>
 
-        <div class="step">
+        <div class="card">
             <div class="step-header">
-                <span class="step-number">2</span>
+                <span class="step-num">2</span>
                 <span class="step-title">Copy this comment</span>
             </div>
             <div class="comment-box" id="comment">{task['comment']}</div>
-            <button class="btn btn-secondary" onclick="copyComment()" id="copy-btn">Copy to clipboard</button>
+            <button class="btn btn-copy" onclick="copyComment()" id="copy-btn">📋 Tap to copy</button>
             <p class="help" id="copy-status"></p>
         </div>
 
-        <div class="step">
+        <div class="card">
             <div class="step-header">
-                <span class="step-number">3</span>
-                <span class="step-title">Post the comment</span>
+                <span class="step-num">3</span>
+                <span class="step-title">Post it</span>
             </div>
             <ol>
                 <li>Go to the page you opened</li>
-                <li>Find the comment box and click it</li>
-                <li>Paste the comment (Ctrl+V or long-press → Paste)</li>
-                <li>Click Post or Submit</li>
+                <li>Find the comment box</li>
+                <li>Paste and submit</li>
             </ol>
         </div>
 
-        <div class="step">
+        <div class="card">
             <div class="step-header">
-                <span class="step-number">4</span>
+                <span class="step-num">4</span>
                 <span class="step-title">Get your proof link</span>
             </div>
             <ol>
-                <li>Find your posted comment</li>
-                <li>Click <strong>Share</strong> under it</li>
+                <li>Click <strong>Share</strong> on your comment</li>
                 <li>Click <strong>Copy Link</strong></li>
             </ol>
         </div>
 
-        <div class="step">
+        <div class="card">
             <div class="step-header">
-                <span class="step-number">5</span>
-                <span class="step-title">Submit your proof</span>
+                <span class="step-num">5</span>
+                <span class="step-title">Paste proof & submit</span>
             </div>
             <form action="/task/{task['id']}/submit" method="POST">
                 <input type="hidden" name="project" value="{project}">
                 <input type="hidden" name="code" value="{code}">
-                <input type="text" name="proof_url" placeholder="Paste your comment link here" required>
-                <button type="submit" class="btn btn-success">Submit proof</button>
+                <input type="text" name="proof_url" placeholder="Paste your comment link here..." required>
+                <button type="submit" class="btn btn-submit">✅ Submit & get paid</button>
             </form>
-            <div class="note">
-                We verify all submissions. Only submit after posting.
-            </div>
+            <div class="note">⚠️ We check all submissions - only submit real proof!</div>
         </div>
 
         <script>
             function copyComment() {{
                 const comment = document.getElementById('comment').innerText;
                 navigator.clipboard.writeText(comment);
-                document.getElementById('copy-status').innerHTML = '✓ Copied! Now paste it on the other page.';
-                document.getElementById('copy-status').style.color = '#10b981';
-                document.getElementById('copy-btn').innerText = '✓ Copied';
-                document.getElementById('copy-btn').style.background = '#dcfce7';
-                document.getElementById('copy-btn').style.color = '#166534';
-                document.getElementById('copy-btn').style.borderColor = '#bbf7d0';
+                document.getElementById('copy-status').innerHTML = '✅ Copied! Now paste it on the other page.';
+                document.getElementById('copy-status').style.color = '#48bb78';
+                document.getElementById('copy-btn').innerHTML = '✅ Copied!';
+                document.getElementById('copy-btn').style.background = '#c6f6d5';
+                document.getElementById('copy-btn').style.color = '#276749';
             }}
 
             let seconds = {expires_in};
             setInterval(() => {{
                 seconds--;
                 if (seconds <= 0) {{
-                    document.getElementById('timer').innerText = 'Expired';
+                    document.getElementById('timer').innerHTML = '<span style="color:#e53e3e">Expired - refresh page</span>';
                     return;
                 }}
                 const m = Math.floor(seconds / 60);
                 const s = seconds % 60;
-                document.getElementById('timer').innerText = m + ':' + s.toString().padStart(2, '0');
+                document.getElementById('timer').innerHTML = '<span>' + m + ':' + s.toString().padStart(2, '0') + '</span>';
             }}, 1000);
         </script>
     </body>
@@ -373,24 +393,36 @@ async def submit_proof(task_id: str, request: Request, project: str = Form(...),
     
     save_data(data)
     
-    return HTMLResponse("""
+    return HTMLResponse(f"""
+        <!DOCTYPE html>
         <html>
         <head>
-            <title>Task Completed!</title>
+            <title>Nice work!</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-                body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
-                .card { background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-                .success { color: #059669; font-size: 3em; }
+                * {{ box-sizing: border-box; }}
+                body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; }}
+                .container {{ background: white; border-radius: 20px; padding: 40px 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); text-align: center; width: 100%; }}
+                .emoji {{ font-size: 72px; margin-bottom: 16px; }}
+                h1 {{ margin: 0 0 8px 0; font-size: 26px; color: #1a1a2e; }}
+                .subtitle {{ color: #666; margin-bottom: 24px; font-size: 16px; }}
+                .code-box {{ background: #f0fff4; border: 2px solid #9ae6b4; padding: 16px; border-radius: 12px; margin-bottom: 24px; }}
+                .code-label {{ font-size: 13px; color: #276749; margin-bottom: 6px; }}
+                .code {{ font-family: monospace; font-size: 24px; font-weight: bold; color: #276749; letter-spacing: 2px; }}
+                .btn {{ display: inline-block; background: #667eea; color: white; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; transition: all 0.2s; }}
+                .btn:hover {{ background: #5a6fd6; transform: translateY(-2px); }}
             </style>
         </head>
         <body>
-            <div class="card">
-                <div class="success">✅</div>
-                <h1>Task Completed!</h1>
-                <p>Your proof has been submitted successfully.</p>
-                <p>Include your <strong>Task Code</strong> in your platform proof.</p>
-                <p><a href="/">Get another task</a></p>
+            <div class="container">
+                <div class="emoji">🎉</div>
+                <h1>Nice work!</h1>
+                <p class="subtitle">Your proof has been submitted</p>
+                <div class="code-box">
+                    <div class="code-label">Your task code (for payment)</div>
+                    <div class="code">{code}</div>
+                </div>
+                <a href="/" class="btn">Get another task →</a>
             </div>
         </body>
         </html>
