@@ -207,89 +207,99 @@ def render_task_page(task, code, expires_in, project):
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             * {{ box-sizing: border-box; }}
-            body {{ font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 12px; background: #f5f5f5; }}
-            .card {{ background: white; border-radius: 12px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-            .step {{ background: white; border-radius: 12px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 5px solid #2563eb; }}
-            .step-number {{ background: #2563eb; color: white; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; margin-right: 12px; }}
-            .step-title {{ font-size: 20px; font-weight: bold; display: inline; }}
-            h1 {{ margin-top: 0; font-size: 1.4em; }}
-            .code {{ background: #fef3c7; padding: 10px 18px; border-radius: 8px; font-family: monospace; font-size: 1.4em; display: inline-block; font-weight: bold; }}
-            .timer {{ color: #dc2626; font-weight: bold; font-size: 1.1em; }}
-            .big-btn {{ display: block; width: 100%; padding: 16px 24px; border-radius: 10px; font-size: 18px; font-weight: bold; text-align: center; cursor: pointer; border: none; margin-top: 12px; text-decoration: none; }}
-            .btn-blue {{ background: #2563eb; color: white; }}
-            .btn-blue:hover {{ background: #1d4ed8; }}
-            .btn-green {{ background: #059669; color: white; }}
-            .btn-green:hover {{ background: #047857; }}
-            .btn-orange {{ background: #ea580c; color: white; }}
-            .btn-orange:hover {{ background: #c2410c; }}
-            .comment-box {{ background: #f0f7ff; padding: 16px; border-radius: 8px; font-size: 15px; white-space: pre-wrap; margin: 12px 0; border: 2px dashed #2563eb; }}
-            input[type="text"] {{ width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-top: 8px; }}
-            input[type="text"]:focus {{ border-color: #2563eb; outline: none; }}
-            .warning {{ background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px; border-radius: 8px; font-size: 14px; margin-top: 12px; }}
-            .help-text {{ color: #666; font-size: 14px; margin-top: 8px; }}
-            .save-code {{ background: #fefce8; border: 2px solid #fde047; padding: 12px; border-radius: 8px; margin-top: 12px; }}
+            body {{ font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 16px; background: #f8fafc; color: #334155; }}
+            .header {{ background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }}
+            .step {{ background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }}
+            .step-header {{ display: flex; align-items: center; margin-bottom: 12px; }}
+            .step-number {{ background: #e0e7ff; color: #4338ca; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; margin-right: 12px; flex-shrink: 0; }}
+            .step-title {{ font-size: 16px; font-weight: 600; color: #1e293b; }}
+            h1 {{ margin: 0 0 8px 0; font-size: 1.5em; color: #1e293b; font-weight: 600; }}
+            .code {{ background: #fef3c7; padding: 12px 20px; border-radius: 10px; font-family: monospace; font-size: 1.5em; display: inline-block; font-weight: bold; color: #92400e; letter-spacing: 2px; }}
+            .timer {{ color: #64748b; font-size: 0.95em; }}
+            .timer span {{ color: #dc2626; font-weight: 600; }}
+            .link {{ color: #4f46e5; word-break: break-all; font-size: 14px; }}
+            .link:hover {{ text-decoration: underline; }}
+            .btn {{ display: block; width: 100%; padding: 14px 20px; border-radius: 10px; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer; border: none; margin-top: 12px; text-decoration: none; transition: all 0.2s; }}
+            .btn-primary {{ background: #4f46e5; color: white; }}
+            .btn-primary:hover {{ background: #4338ca; }}
+            .btn-secondary {{ background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }}
+            .btn-secondary:hover {{ background: #e2e8f0; }}
+            .btn-success {{ background: #10b981; color: white; }}
+            .btn-success:hover {{ background: #059669; }}
+            .comment-box {{ background: #f8fafc; padding: 16px; border-radius: 10px; font-size: 14px; white-space: pre-wrap; margin: 12px 0; border: 1px solid #e2e8f0; line-height: 1.6; }}
+            input[type="text"] {{ width: 100%; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 16px; margin-top: 8px; background: #f8fafc; }}
+            input[type="text"]:focus {{ border-color: #4f46e5; outline: none; background: white; }}
+            .note {{ background: #fef3c7; color: #92400e; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-top: 16px; }}
+            .help {{ color: #64748b; font-size: 13px; margin-top: 8px; }}
+            ol {{ margin: 8px 0; padding-left: 24px; }}
+            ol li {{ margin-bottom: 8px; font-size: 15px; line-height: 1.5; }}
         </style>
     </head>
     <body>
-        <div class="card">
-            <h1>YOUR TASK</h1>
-            <p>Your Task Code: <span class="code">{code}</span></p>
-            <div class="save-code">
-                <strong>SAVE THIS CODE!</strong> You need it for payment.
+        <div class="header">
+            <h1>Your Task</h1>
+            <div class="code">{code}</div>
+            <p class="help" style="margin-top: 12px;">Save this code for payment proof</p>
+            <p class="timer">Time remaining: <span id="timer">{expires_in // 60}:{expires_in % 60:02d}</span></p>
+        </div>
+
+        <div class="step">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <span class="step-title">Open the page</span>
             </div>
-            <p style="margin-top: 12px;">⏱️ Time left: <span class="timer" id="timer">{expires_in // 60}:{expires_in % 60:02d}</span></p>
+            <p><a href="{task['url']}" target="_blank" class="link">{task['url']}</a></p>
+            <p class="help">Opens in a new tab. Keep this page open.</p>
         </div>
 
         <div class="step">
-            <span class="step-number">1</span>
-            <span class="step-title">CLICK THIS BUTTON TO OPEN THE PAGE</span>
-            <a href="{task['url']}" target="_blank" class="big-btn btn-blue">OPEN PAGE IN NEW TAB</a>
-            <p class="help-text">A new tab will open. Keep this tab open too!</p>
-        </div>
-
-        <div class="step">
-            <span class="step-number">2</span>
-            <span class="step-title">COPY THIS COMMENT</span>
+            <div class="step-header">
+                <span class="step-number">2</span>
+                <span class="step-title">Copy this comment</span>
+            </div>
             <div class="comment-box" id="comment">{task['comment']}</div>
-            <button class="big-btn btn-orange" onclick="copyComment()">TAP TO COPY COMMENT</button>
-            <p class="help-text" id="copy-status">Tap the button, then paste in the other tab</p>
+            <button class="btn btn-secondary" onclick="copyComment()" id="copy-btn">Copy to clipboard</button>
+            <p class="help" id="copy-status"></p>
         </div>
 
         <div class="step">
-            <span class="step-number">3</span>
-            <span class="step-title">POST THE COMMENT</span>
-            <p>Go to the tab you opened and:</p>
-            <ol style="font-size: 16px; line-height: 1.8;">
-                <li>Scroll down to the comment box</li>
-                <li>Click in the comment box</li>
+            <div class="step-header">
+                <span class="step-number">3</span>
+                <span class="step-title">Post the comment</span>
+            </div>
+            <ol>
+                <li>Go to the page you opened</li>
+                <li>Find the comment box and click it</li>
                 <li>Paste the comment (Ctrl+V or long-press → Paste)</li>
-                <li>Click the Post/Submit button</li>
+                <li>Click Post or Submit</li>
             </ol>
         </div>
 
         <div class="step">
-            <span class="step-number">4</span>
-            <span class="step-title">GET YOUR PROOF LINK</span>
-            <p>After posting, get the link to YOUR comment:</p>
-            <ol style="font-size: 16px; line-height: 1.8;">
-                <li>Find your comment on the page</li>
-                <li>Click <strong>"Share"</strong> under your comment</li>
-                <li>Click <strong>"Copy Link"</strong></li>
+            <div class="step-header">
+                <span class="step-number">4</span>
+                <span class="step-title">Get your proof link</span>
+            </div>
+            <ol>
+                <li>Find your posted comment</li>
+                <li>Click <strong>Share</strong> under it</li>
+                <li>Click <strong>Copy Link</strong></li>
             </ol>
-            <p class="help-text">The link should look like: reddit.com/r/something/comments/...</p>
         </div>
 
         <div class="step">
-            <span class="step-number">5</span>
-            <span class="step-title">PASTE YOUR PROOF LINK HERE</span>
+            <div class="step-header">
+                <span class="step-number">5</span>
+                <span class="step-title">Submit your proof</span>
+            </div>
             <form action="/task/{task['id']}/submit" method="POST">
                 <input type="hidden" name="project" value="{project}">
                 <input type="hidden" name="code" value="{code}">
-                <input type="text" name="proof_url" placeholder="Paste your comment link here..." required>
-                <button type="submit" class="big-btn btn-green">SUBMIT AND GET PAID</button>
+                <input type="text" name="proof_url" placeholder="Paste your comment link here" required>
+                <button type="submit" class="btn btn-success">Submit proof</button>
             </form>
-            <div class="warning">
-                <strong>DO NOT</strong> submit without posting the comment first. We check all submissions!
+            <div class="note">
+                We verify all submissions. Only submit after posting.
             </div>
         </div>
 
@@ -297,16 +307,19 @@ def render_task_page(task, code, expires_in, project):
             function copyComment() {{
                 const comment = document.getElementById('comment').innerText;
                 navigator.clipboard.writeText(comment);
-                document.getElementById('copy-status').innerHTML = '<strong style="color: green;">✓ COPIED! Now paste it in the other tab</strong>';
-                event.target.innerText = '✓ COPIED!';
-                event.target.style.background = '#16a34a';
+                document.getElementById('copy-status').innerHTML = '✓ Copied! Now paste it on the other page.';
+                document.getElementById('copy-status').style.color = '#10b981';
+                document.getElementById('copy-btn').innerText = '✓ Copied';
+                document.getElementById('copy-btn').style.background = '#dcfce7';
+                document.getElementById('copy-btn').style.color = '#166534';
+                document.getElementById('copy-btn').style.borderColor = '#bbf7d0';
             }}
 
             let seconds = {expires_in};
             setInterval(() => {{
                 seconds--;
                 if (seconds <= 0) {{
-                    document.getElementById('timer').innerText = 'EXPIRED - Refresh page';
+                    document.getElementById('timer').innerText = 'Expired';
                     return;
                 }}
                 const m = Math.floor(seconds / 60);
