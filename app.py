@@ -33,12 +33,22 @@ def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
 # --- Data Layer ---
 
 def load_data():
+    # Ensure directory exists
+    data_dir = os.path.dirname(DATA_FILE)
+    if data_dir:
+        os.makedirs(data_dir, exist_ok=True)
+
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
             return json.load(f)
     return {"projects": {}, "assignments": {}, "submissions": []}
 
 def save_data(data):
+    # Ensure directory exists
+    data_dir = os.path.dirname(DATA_FILE)
+    if data_dir:
+        os.makedirs(data_dir, exist_ok=True)
+
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=2, default=str)
 
