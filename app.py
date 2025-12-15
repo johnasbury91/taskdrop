@@ -397,9 +397,22 @@ https://reddit.com/r/example/post2 | Another comment" required></textarea>
                 <tr><th>ID</th><th>URL</th><th>Status</th><th>Proof</th></tr>
         """
         
+        # Get assigned task IDs for this project
+        assigned_task_ids = {
+            a["task_id"] for key, a in data["assignments"].items()
+            if key.startswith(f"{project}:") and not a.get("completed")
+        }
+
         for task in tasks:
-            status = "completed" if task.get("completed") else "open"
-            status_label = "✅ Done" if task.get("completed") else "🟢 Open"
+            if task.get("completed"):
+                status = "completed"
+                status_label = "✅ Done"
+            elif task["id"] in assigned_task_ids:
+                status = "assigned"
+                status_label = "🔒 Locked"
+            else:
+                status = "open"
+                status_label = "🟢 Open"
             proof = f'<a href="{task.get("proof_url", "#")}" target="_blank">View</a>' if task.get("proof_url") else "-"
             short_url = task["url"][:40] + "..." if len(task["url"]) > 40 else task["url"]
             
