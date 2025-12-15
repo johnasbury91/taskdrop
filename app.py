@@ -125,30 +125,32 @@ async def home():
 @app.get("/task", response_class=HTMLResponse)
 async def get_task(request: Request, project: str = None):
     """Serve one unique task to worker"""
-    
+
     if not project:
         return RedirectResponse("/")
-    
+
     data = load_data()
     data = cleanup_expired_assignments(data)
-    
+
     if project not in data["projects"]:
         return HTMLResponse("<h1>Project not found</h1><p><a href='/'>Back</a></p>")
-    
+
     worker_id = get_worker_id(request)
-    
-    # Check if worker already has an active assignment for this project
-    assignment_key = f"{project}:{worker_id}"
-    
-    if assignment_key in data["assignments"]:
-        assignment = data["assignments"][assignment_key]
-        if not assignment.get("completed"):
-            # Return existing task
-            task = next((t for t in data["projects"][project] if t["id"] == assignment["task_id"]), None)
+
+    # Check if worker already has ANY active assignment (across all projects)
+    for key, assignment in data["assignments"].items():
+        if key.endswith(f":{worker_id}") and not assignment.get("completed"):
+            # Worker has an active task - redirect to it
+            active_project = key.split(":")[0]
+            task = next((t for t in data["projects"].get(active_project, []) if t["id"] == assignment["task_id"]), None)
             if task:
                 assigned_at = datetime.fromisoformat(assignment["assigned_at"])
                 expires_in = TASK_EXPIRY_MINUTES * 60 - (datetime.now() - assigned_at).seconds
-                return render_task_page(task, assignment["code"], expires_in, project)
+                if expires_in > 0:
+                    return render_task_page(task, assignment["code"], expires_in, active_project)
+
+    # No active assignment - check if this specific project assignment exists
+    assignment_key = f"{project}:{worker_id}"
     
     # Find unassigned task
     assigned_task_ids = {
