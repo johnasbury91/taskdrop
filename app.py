@@ -450,6 +450,12 @@ async def admin_dashboard(admin: str = Depends(verify_admin)):
             textarea { min-height: 100px; font-family: inherit; }
             button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
             button:hover { background: #1d4ed8; }
+            .btn-sm { padding: 4px 10px; font-size: 12px; margin-right: 4px; }
+            .btn-edit { background: #f59e0b; }
+            .btn-edit:hover { background: #d97706; }
+            .btn-delete { background: #ef4444; }
+            .btn-delete:hover { background: #dc2626; }
+            .actions { white-space: nowrap; }
             table { width: 100%; border-collapse: collapse; font-size: 14px; }
             th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
             th { background: #f9fafb; }
@@ -492,7 +498,7 @@ https://reddit.com/r/example/post2 | Another comment" required></textarea>
         <div class="card">
             <h2>📁 {project} <small style="color:#666">({completed}/{total} done)</small></h2>
             <table>
-                <tr><th>ID</th><th>URL</th><th>Status</th><th>Proof</th></tr>
+                <tr><th>ID</th><th>URL</th><th>Status</th><th>Proof</th><th>Actions</th></tr>
         """
         
         # Get assigned task IDs for this project
@@ -520,6 +526,12 @@ https://reddit.com/r/example/post2 | Another comment" required></textarea>
                     <td><a href="{task['url']}" target="_blank">{short_url}</a></td>
                     <td><span class="status {status}">{status_label}</span></td>
                     <td>{proof}</td>
+                    <td class="actions">
+                        <a href="/admin/edit/{project}/{task['id']}"><button class="btn-sm btn-edit">Edit</button></a>
+                        <form action="/admin/delete/{project}/{task['id']}" method="POST" style="display:inline" onsubmit="return confirm('Delete this task?')">
+                            <button type="submit" class="btn-sm btn-delete">Delete</button>
+                        </form>
+                    </td>
                 </tr>
             """
         
@@ -581,6 +593,88 @@ async def admin_add_tasks(project: str = Form(...), tasks: str = Form(...), admi
             "completed": False
         })
     
+    save_data(data)
+    return RedirectResponse("/admin", status_code=303)
+
+@app.get("/admin/edit/{project}/{task_id}", response_class=HTMLResponse)
+async def admin_edit_form(project: str, task_id: str, admin: str = Depends(verify_admin)):
+    """Show edit form for a task"""
+    data = load_data()
+
+    task = None
+    for t in data["projects"].get(project, []):
+        if t["id"] == task_id:
+            task = t
+            break
+
+    if not task:
+        return HTMLResponse("<h1>Task not found</h1><p><a href='/admin'>Back</a></p>")
+
+    return HTMLResponse(f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Edit Task</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            * {{ box-sizing: border-box; }}
+            body {{ font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; }}
+            .card {{ background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+            h1 {{ margin-top: 0; }}
+            label {{ display: block; margin-bottom: 4px; font-weight: 600; }}
+            input, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }}
+            textarea {{ min-height: 120px; font-family: inherit; }}
+            button {{ background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; }}
+            button:hover {{ background: #1d4ed8; }}
+            .cancel {{ background: #6b7280; margin-left: 8px; }}
+            .cancel:hover {{ background: #4b5563; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>✏️ Edit Task</h1>
+            <form action="/admin/edit/{project}/{task_id}" method="POST">
+                <label>URL:</label>
+                <input type="text" name="url" value="{task['url']}" required>
+
+                <label>Comment:</label>
+                <textarea name="comment" required>{task['comment']}</textarea>
+
+                <button type="submit">Save Changes</button>
+                <a href="/admin"><button type="button" class="cancel">Cancel</button></a>
+            </form>
+        </div>
+    </body>
+    </html>
+    """)
+
+@app.post("/admin/edit/{project}/{task_id}")
+async def admin_edit_task(project: str, task_id: str, url: str = Form(...), comment: str = Form(...), admin: str = Depends(verify_admin)):
+    """Update a task"""
+    data = load_data()
+
+    for task in data["projects"].get(project, []):
+        if task["id"] == task_id:
+            task["url"] = url
+            task["comment"] = comment
+            break
+
+    save_data(data)
+    return RedirectResponse("/admin", status_code=303)
+
+@app.post("/admin/delete/{project}/{task_id}")
+async def admin_delete_task(project: str, task_id: str, admin: str = Depends(verify_admin)):
+    """Delete a task"""
+    data = load_data()
+
+    if project in data["projects"]:
+        data["projects"][project] = [t for t in data["projects"][project] if t["id"] != task_id]
+
+        # Also remove any assignments for this task
+        keys_to_remove = [k for k, v in data["assignments"].items() if v["task_id"] == task_id]
+        for key in keys_to_remove:
+            del data["assignments"][key]
+
     save_data(data)
     return RedirectResponse("/admin", status_code=303)
 
